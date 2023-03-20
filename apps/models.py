@@ -11,14 +11,41 @@ class ResNet9(ndl.nn.Module):
     def __init__(self, device=None, dtype="float32"):
         super().__init__()
         ### BEGIN YOUR SOLUTION ###
-        raise NotImplementedError() ###
+        self.model = nn.Sequential(
+            self.ConvBS(3,16,7,4,device=device),
+            self.ConvBS(16,32,3,2,device=device),
+            nn.Residual(
+                nn.Sequential(
+                    self.ConvBS(32,32,3,1,device=device),
+                    self.ConvBS(32,32,3,1,device=device),
+                )
+            ),
+            self.ConvBS(32,64,3,2,device=device),
+            self.ConvBS(64,128,3,2,device=device),
+            nn.Residual(
+                nn.Sequential(
+                    self.ConvBS(128,128,3,1,device=device),
+                    self.ConvBS(128,128,3,1,device=device),
+                )
+            ),
+            nn.Flatten(),
+            nn.Linear(128,128,device=device),
+            nn.ReLU(),
+            nn.Linear(128,10,device=device)
+        )
         ### END YOUR SOLUTION
 
     def forward(self, x):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return self.model(x)
         ### END YOUR SOLUTION
-
+    
+    def convBN(self,a,b,k,s): 
+        return nn.Sequential(
+        nn.Conv(a, b, k, stride=s, bias=True, device=self.device),
+        nn.BatchNorm2d(dim=b, device=self.device),
+        nn.ReLU())
+        
 
 class LanguageModel(nn.Module):
     def __init__(self, embedding_size, output_size, hidden_size, num_layers=1,

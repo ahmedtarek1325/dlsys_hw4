@@ -246,7 +246,11 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        # raise the error as requested
+        if -1 not in new_shape:
+            assert prod(new_shape) == prod(self._shape) , f"elements of newshape {new_shape}  != the orignal shape {self._shape}"
+        assert self.is_compact() , "array is not compact"
+        return NDArray.make(shape=new_shape, device=self._device, handle=self._handle)
         ### END YOUR SOLUTION
 
     def permute(self, new_axes):
@@ -271,7 +275,16 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape,new_strides= [], []
+        for v in new_axes: 
+            new_shape.append(self._shape[v])
+            new_strides.append(self._strides[v])
+        
+        return NDArray.make(shape=tuple(new_shape),
+                            strides=tuple(new_strides),
+                            device=self._device,
+                            handle=self._handle,
+                            offset=self._offset)
         ### END YOUR SOLUTION
 
     def broadcast_to(self, new_shape):
@@ -294,7 +307,27 @@ class NDArray:
             point to the same memory as the original array.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        strides = list(self._strides)
+
+        for i,_ in enumerate(self._shape): 
+            if self._shape[i] != 1 : 
+                assert new_shape[i] == self._shape[i] , "new_shape[i] != shape[i] and shape[i] !=1"
+            else: 
+                strides[i]=0 # which means we will b repeating on this dim
+        
+        num = len(new_shape)-len(self._shape)
+        strides = tuple(
+                [
+                    strides.append(0)
+                    for i in range(num)
+                ]
+            ) if num else tuple(strides)
+        
+        return NDArray.make(shape=new_shape,
+                            strides=strides,
+                            device=self._device,
+                            handle=self._handle,
+                            offset=self._offset)
         ### END YOUR SOLUTION
 
     ### Get and set elements
@@ -361,7 +394,20 @@ class NDArray:
         assert len(idxs) == self.ndim, "Need indexes equal to number of dimensions"
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = [len(range(i.start,i.stop,i.step)) for i in idxs]
+        new_shape = tuple(
+            [ v if v else 1 for v in new_shape]
+        )
+        offset= [v.start*self.strides[i] for i,v in enumerate(idxs)]
+        offset = sum(offset)
+
+        strides= tuple([v*idxs[i].step for i,v in enumerate(self._strides)])
+     
+        return NDArray.make(shape=new_shape,
+                            strides=strides,
+                            device=self._device,
+                            handle=self._handle,
+                            offset=offset)
         ### END YOUR SOLUTION
 
     def __setitem__(self, idxs, other):
@@ -572,7 +618,21 @@ class NDArray:
         Note: compact() before returning.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_strides = []
+        new_offset = 0
+        for i,v in enumerate(self.strides):
+            if i in axes: 
+                new_strides.append(-v)
+                new_offset += v*(self.shape[i]-1)
+            else :
+                new_strides.append(v)
+        print("am hereeee")
+        new_arr= NDArray.make(shape=self.shape,
+                              strides=tuple(new_strides),
+                              device=self.device,
+                              handle=self._handle,
+                              offset=new_offset)
+        return new_arr.compact()
         ### END YOUR SOLUTION
 
 
@@ -583,7 +643,17 @@ class NDArray:
         axes = ( (0, 0), (1, 1), (0, 0)) pads the middle axis with a 0 on the left and right side.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        assert self.ndim == len(axes), f"len of axes is {len(axes)} != ndims of arr {self.ndim}"
+        
+        new_shape= tuple(np.sum(axes,axis= 1) + list(self._shape))
+        new_arr = full(fill_value=0,shape= new_shape,dtype=self.dtype,device=self.device)
+
+        slicing = []
+        for i,(lp,_) in enumerate(axes):  
+            slicing.append(slice(lp,lp+self.shape[i]))
+        
+        new_arr[tuple(slicing)] = self
+        return new_arr
         ### END YOUR SOLUTION
 
 
